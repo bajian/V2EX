@@ -1,4 +1,4 @@
-package me.xunhou.v2ex.ui;
+package me.xunhou.v2ex.ui.fragment;
 
 
 import android.graphics.Color;
@@ -18,7 +18,6 @@ import android.widget.ListView;
 import android.widget.NumberPicker;
 
 import com.github.clans.fab.FloatingActionButton;
-import com.github.clans.fab.FloatingActionMenu;
 import com.github.johnpersano.supertoasts.SuperCardToast;
 import com.github.johnpersano.supertoasts.SuperToast;
 import com.mikepenz.google_material_typeface_library.GoogleMaterial;
@@ -33,6 +32,8 @@ import me.xunhou.v2ex.R;
 import me.xunhou.v2ex.core.FourmList;
 import me.xunhou.v2ex.model.ForumItemBean;
 import me.xunhou.v2ex.persistence.IntentConstant;
+import me.xunhou.v2ex.ui.BaseFragment;
+import me.xunhou.v2ex.ui.adapter.ForumListAdapter;
 import me.xunhou.v2ex.utils.BusProvider;
 import me.xunhou.v2ex.utils.ToastUtil;
 
@@ -48,12 +49,8 @@ public class ForumListFragment extends BaseFragment implements SwipeRefreshLayou
     SwipeRefreshLayout swipeContainer;
     @InjectView(R.id.card_container)
     LinearLayout cardContainer;
-    @InjectView(R.id.fam_actions)
-    FloatingActionMenu famActions;
-//  @InjectView(R.id.action_fab_new_thread)
-//  FloatingActionButton actionFabNewThread;
-    @InjectView(R.id.action_fab_refresh)
-    FloatingActionButton actionFabRefresh;
+    @InjectView(R.id.action_fab_new_thread)
+    FloatingActionButton actionFabNewThread;
 
     private FourmList mFourmList;
     private ForumListAdapter forumListAdapter;
@@ -72,8 +69,10 @@ public class ForumListFragment extends BaseFragment implements SwipeRefreshLayou
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+        getRemoteData();
+    }
 
-
+    private void getRemoteData() {
         mNode = getArguments().getString(IntentConstant.NODE);
         if (mNode == null) {
             new IllegalArgumentException("Node is null!!!plase check it.");
@@ -102,11 +101,14 @@ public class ForumListFragment extends BaseFragment implements SwipeRefreshLayou
         super.onActivityCreated(savedInstanceState);
         BusProvider.register(this);
         isLoading = false;
+        swipeContainer.post(new Runnable() {
+            @Override
+            public void run() {
+                swipeContainer.setRefreshing(true);
+            }
+        });
         mFourmList = new FourmList();
-
-        if (mList.size() == 0) {
-            mFourmList.getTopicsList(page, mNode);
-        }
+        mFourmList.getTopicsList(page, mNode);
     }
 
     @Override
@@ -123,30 +125,20 @@ public class ForumListFragment extends BaseFragment implements SwipeRefreshLayou
         lv.setOnScrollListener(this);
         lv.setOnItemClickListener(this);
 
-        actionFabRefresh.setImageDrawable(new IconicsDrawable(getActivity(), GoogleMaterial.Icon.gmd_refresh).color(Color.WHITE));
-        actionFabRefresh.setOnClickListener(new View.OnClickListener() {
+        actionFabNewThread.setImageDrawable(new IconicsDrawable(getActivity(), GoogleMaterial.Icon.gmd_create).color(Color.WHITE));
+        actionFabNewThread.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                famActions.close(true);
-                onRefresh();
+                newThread();
             }
         });
-
-//        actionFabNewThread.setImageDrawable(new IconicsDrawable(getActivity(), GoogleMaterial.Icon.gmd_create).color(Color.WHITE));
-//        actionFabNewThread.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                famActions.close(true);
-//                newThread();
-//            }
-//        });
 
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         menu.clear();
-//        inflater.inflate(R.menu.menu_main, menu);
+        inflater.inflate(R.menu.menu_main, menu);
         setActionBarTitle(mNode.toUpperCase());
         syncActionBarState();
         int forumIdx = 1;
@@ -168,11 +160,6 @@ public class ForumListFragment extends BaseFragment implements SwipeRefreshLayou
     }
 
     private void newThread() {
-        NewThreadFragment newThreadFragment = new NewThreadFragment();
-        getFragmentManager().beginTransaction()
-                .replace(R.id.main_frame_container, newThreadFragment, NewThreadFragment.class.getName())
-                .addToBackStack(NewThreadFragment.class.getName())
-                .commit();
     }
 
     @Subscribe
@@ -222,8 +209,6 @@ public class ForumListFragment extends BaseFragment implements SwipeRefreshLayou
     public void onRefresh() {
         page = 1;
         isRefresh = true;
-        swipeContainer.setRefreshing(true);
-
         mFourmList.getTopicsList(page, mNode);
     }
 
